@@ -1,148 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAK P100 Check-In</title>
-
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Event Check-in</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .app-shell{max-width:1500px;margin:24px auto;padding:0 20px}.topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}.topbar h1{margin:0}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.toolbar select,.toolbar input,.field input,.field textarea{padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#172033}.btnx{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:600;background:#1e5b91;color:white}.btnx.secondary{background:#e8edf3;color:#172033}.btnx.danger{background:#a83232}.btnx:disabled{opacity:.5;cursor:not-allowed}.hidden{display:none!important}.event-meta{color:#64748b;margin:4px 0 16px}.stats{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:12px;margin:16px 0}.statx{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px}.statx strong{display:block;font-size:27px}.layout{display:grid;grid-template-columns:minmax(320px,1.1fr) minmax(320px,1fr);gap:16px}.cardx{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;min-width:0}.cardx h2{margin:0 0 14px;font-size:19px}.searchrow{display:flex;gap:8px;margin-bottom:12px}.searchrow input{flex:1;padding:10px;border:1px solid #cbd5e1;border-radius:8px}.guest-table{width:100%;border-collapse:collapse;font-size:14px}.guest-table th,.guest-table td{padding:9px 7px;border-bottom:1px solid #e5eaf0;text-align:left}.guest-table th{color:#64748b}.table-wrap{overflow:auto;max-height:580px}.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#e8edf3;font-size:12px}.pill.green{background:#dcfce7;color:#166534}.pill.amber{background:#fef3c7;color:#92400e}.pill.red{background:#fee2e2;color:#991b1b}.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}.field label{font-size:13px;color:#475569}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.formgrid .wide{grid-column:1/-1}.actions{display:flex;gap:7px;flex-wrap:wrap}.statusline{padding:10px;background:#f1f5f9;border-radius:8px;margin:8px 0;color:#334155}.muted{color:#64748b;font-size:13px}.notice{padding:10px;border-radius:8px;background:#eff6ff;color:#1e40af;margin:10px 0}.notice.error{background:#fee2e2;color:#991b1b}.notice.success{background:#dcfce7;color:#166534}.section{margin-top:16px}.station-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.station-item{padding:10px;border:1px solid #cbd5e1;border-radius:8px;display:flex;justify-content:space-between;align-items:center}.login-wrap{max-width:420px;margin:9vh auto;padding:24px;background:white;border:1px solid #e2e8f0;border-radius:14px}.login-wrap input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;margin:10px 0}.history{max-height:280px;overflow:auto}.history div{padding:8px;border-bottom:1px solid #e5eaf0;font-size:13px}@media(max-width:900px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+  </style>
 </head>
 <body>
-
-<!-- LOGIN OVERLAY -->
-<div class="login-overlay" id="login-overlay">
-  <div class="login-box">
-    <div class="login-icon">🔐</div>
-    <h2>MAK P100 Check-In</h2>
-    <p>Accedi come amministratore o come postazione</p>
-    <input type="password" id="login-input" placeholder="Password" onkeydown="if(event.key==='Enter') tryLogin()" autocomplete="current-password" autofocus>
-    <div class="login-error" id="login-error"></div>
-    <button class="btn btn-checkin" onclick="tryLogin()">Accedi</button>
-  </div>
-</div>
-
-<header>
-  <h1>&#x2713; MAK P100 <span>Check-In</span></h1>
-  <div style="display:flex;gap:10px;align-items:center;">
-    <button class="admin-open-btn" id="admin-open-btn" onclick="openAdminPanel()" hidden>⚙ Admin</button>
-    <button class="logout-btn" id="logout-btn" onclick="logout()" hidden>Esci</button>
-    <button class="sos-btn" id="sos-btn" onclick="sendSOS()">🚨 Assistenza urgente</button>
-    <div class="postazione-badge" onclick="openPostazioneModal()">
-      <span id="postazione-label">Seleziona postazione</span>
-    </div>
-  </div>
-</header>
-
-<div class="stats-bar">
-  <div class="stat">
-    <div class="stat-num" id="stat-total">–</div>
-    <div class="stat-label">Totale invitati</div>
-  </div>
-  <div class="stat green">
-    <div class="stat-num" id="stat-entered">–</div>
-    <div class="stat-label">Entrati</div>
-  </div>
-  <div class="stat amber">
-    <div class="stat-num" id="stat-pending">–</div>
-    <div class="stat-label">In attesa</div>
-  </div>
-  <div class="stat accent">
-    <div class="stat-num" id="stat-pct">–</div>
-    <div class="stat-label">Completamento</div>
-  </div>
-</div>
-
-<div class="main">
-  <div class="panel-left">
-    <div class="search-box">
-      <input type="text" id="search" placeholder="Cerca per nome, cognome, CI o invitante..." oninput="renderList()">
-    </div>
-    <div class="filter-tabs">
-      <div class="filter-tab active" onclick="setFilter('all', this)">Tutti</div>
-      <div class="filter-tab" onclick="setFilter('pending', this)">In attesa</div>
-      <div class="filter-tab" onclick="setFilter('done', this)">Entrati</div>
-      <div class="filter-tab" onclick="setFilter('group', this)">Per invitante</div>
-    </div>
-    <div class="guest-list" id="guest-list"></div>
-  </div>
-
-  <div class="panel-right" id="panel-right">
-    <div class="empty-state" id="empty-state">
-      <div class="icon">&#x1F464;</div>
-      <p>Seleziona un invitato dalla lista</p>
-    </div>
-    <div id="detail-view" style="display:none"></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<div class="modal-overlay" id="postazione-modal">
-  <div class="modal">
-    <h3>Seleziona postazione</h3>
-    <select id="postazione-select">
-    </select>
-    <div class="modal-btns">
-      <button class="btn btn-cancel" onclick="closePostazioneModal()">Annulla</button>
-      <button class="btn btn-checkin" id="station-confirm" onclick="confirmPostazione()">Conferma</button>
-    </div>
-  </div>
-</div>
-
-<div class="tables-modal-overlay" id="tables-modal">
-  <div class="tables-modal">
-    <h3>🪑 Tavoli invitati registrati</h3>
-    <ul id="tables-modal-list"></ul>
-    <button class="btn btn-checkin" onclick="closeTablesModal()">Chiudi</button>
-  </div>
-</div>
-
-<div class="admin-modal-overlay" id="admin-modal" aria-hidden="true">
-  <section class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-title">
-    <div class="admin-modal-header">
-      <div>
-        <h2 id="admin-title">Pannello admin</h2>
-        <p>Aggiungi invitati o rimuovili dalla lista dell’evento.</p>
-      </div>
-      <button class="admin-close-btn" onclick="closeAdminPanel()" aria-label="Chiudi pannello">✕</button>
-    </div>
-
-    <form id="guest-form" class="admin-form">
-      <label>Nome<input name="nome" required maxlength="100"></label>
-      <label>Cognome<input name="cognome" required maxlength="100"></label>
-      <label>Codice carta d’identità<input name="codice_carta_identita" required maxlength="40"></label>
-      <label>Invitato da<input name="invitante" maxlength="150"></label>
-      <label>Numero tavolo<input name="numero_tavolo" maxlength="100"></label>
-      <button class="btn btn-checkin admin-add-btn" type="submit">Aggiungi invitato</button>
-    </form>
-
-    <div class="admin-list-header">
-      <h3>Invitati (<span id="admin-guest-count">0</span>)</h3>
-      <input id="admin-search" type="search" placeholder="Cerca invitato..." aria-label="Cerca invitato">
-    </div>
-    <div class="admin-guest-list-wrap">
-      <table class="admin-guest-table">
-        <thead><tr><th>Invitato</th><th>Codice CI</th><th>Stato</th><th></th></tr></thead>
-        <tbody id="admin-guest-list"></tbody>
-      </table>
-      <p class="admin-empty" id="admin-empty" hidden>Nessun invitato trovato.</p>
-    </div>
-
-    <section class="admin-backups" aria-labelledby="admin-backups-title">
-      <div class="admin-backups-header">
-        <div>
-          <h3 id="admin-backups-title">Backup cloud</h3>
-          <p>I backup contengono i dati degli invitati e dei check-in.</p>
-        </div>
-        <button class="btn btn-checkin" id="create-backup-btn" type="button">Crea backup</button>
-      </div>
-      <p class="admin-backup-status" id="admin-backup-status" role="status"></p>
-      <ul class="admin-backup-list" id="admin-backup-list"></ul>
-    </section>
+  <section id="login" class="login-wrap">
+    <h1>Event Check-in</h1><p class="muted">Accedi come amministratore o operatore</p>
+    <input id="password" type="password" autocomplete="current-password" placeholder="Password" onkeydown="if(event.key==='Enter')login()">
+    <button class="btnx" style="width:100%" onclick="login()">Accedi</button><p id="login-error" class="muted"></p>
   </section>
-</div>
-
-
-  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
-</body>
-</html>
+  <main id="app" class="app-shell hidden">
+    <div class="topbar">
+      <div><h1>Event Check-in</h1><div id="user-meta" class="muted"></div></div>
+      <div class="toolbar"><label for="event-select">Evento</label><select id="event-select" onchange="selectEvent()"><option value="">Seleziona evento</option></select><button class="btnx secondary" onclick="refreshAll()">Aggiorna</button><button class="btnx secondary" onclick="logout()">Esci</button></div>
+    </div>
+    <div id="event-meta" class="event-meta">Seleziona un evento per iniziare.</div>
+    <section class="stats">
+      <div class="statx"><span class="muted">Invitati</span><strong id="s-total">—</strong></div>
+      <div class="statx"><span class="muted">Ingressi</span><strong id="s-in">—</strong></div>
+      <div class="statx"><span class="muted">Presenti</span><strong id="s-present">—</strong></div>
+      <div class="statx"><span class="muted">Uscite</span><strong id="s-out">—</strong></div>
+      <div class="statx"><span class="muted">In attesa</span><strong id="s-pending">—</strong></div>
+    </section>
+    <div id="global-message"></div>
+    <section class="layout">
+      <div class="cardx">
+        <h2>Invitati</h2>
+        <div class="searchrow"><input id="search" placeholder="Cerca nome, cognome, codice, invitante o tavolo" oninput="renderGuests()"><select id="guest-filter" onchange="renderGuests()"><option value="all">Tutti</option><option value="pending">Non entrati</option><option value="present">Presenti</option><option value="out">Usciti</option></select></div>
+        <div class="table-wrap"><table class="guest-table"><thead><tr><th>Invitato</th><th>Tavolo</th><th>Stato</th><th>Azioni</th></tr></thead><tbody id="guest-rows"></tbody></table></div>
+        <p id="guest-count" class="muted"></p>
+      </div>
+      <div class="cardx">
+        <h2 id="detail-title">Dettaglio invitato</h2><div id="guest-detail" class="muted">Seleziona un invitato dalla tabella.</div>
+        <div class="section" id="station-section"><h2>Postazioni</h2><div id="station-list" class="station-grid"></div><p class="muted">Gli operatori devono occupare una postazione prima di registrare movimenti.</p></div>
+        <div class="section"><h2>Movimenti recenti</h2><div id="history" class="history muted">Nessun movimento caricato.</div></div>
+      </div>
+    </section>
+    <section id="admin-tools" class="cardx section hidden">
+      <h2>Amministrazione evento</h2>
+      <div class="actions"><button class="btnx secondary" onclick="downloadTemplate()">Scarica modello Excel</button><button class="btnx secondary" onclick="document.getElementById('excel-file').click()">Importa Excel</button><input id="excel-file" class="hidden" type="file" accept=".xlsx,.xlsm" onchange="previewImport()"><button class="btnx secondary" onclick="downloadReport()">Scarica report PDF</button><button class="btnx secondary" onclick="newEvent()">Crea evento</button><button class="btnx secondary" onclick="changeEventStatus('closed')">Chiudi evento</button><button class="btnx danger" onclick="changeEventStatus('archived')">Archivia evento</button><button class="btnx secondary" onclick="changeEventStatus('active')">Riapri evento</button></div>
+      <div id="import-result" class="section"></div>
+      <h2 class="section">Aggiungi / modifica invitato</h2>
+      <form id="guest-form" onsubmit="saveGuest(event)"><input type="hidden" id="edit-id"><div class="formgrid">
+        <div class="field"><label>Nome *</label><input id="f-nome" required maxlength="100"></div><div class="field"><label>Cognome *</label><input id="f-cognome" required maxlength="100"></div>
+        <div class="field"><label>Codice identificativo *</label><input id="f-code" required maxlength="40"></div><div class="field"><label>Invitato da</label><input id="f-invitante" maxlength="150"></div>
+        <div class="field"><label>Numero tavolo</label><input id="f-tavolo" maxlength="100"></div><div class="field"><label>Note</label><input id="f-note"></div>
+      </div><div class="actions"><button class="btnx" type="submit">Salva invitato</button><button class="btnx secondary" type="button" onclick="resetGuestForm()">Pulisci</button></div></form>
+      <div class="section"><h2>Crea nuovo evento</h2><div class="formgrid"><div class="field"><label>Nome evento</label><input id="new-event-name" placeholder="Nome evento"></div><div class="field"><label>Data</label><input id="new-event-date" type="date"></div></div><button class="btnx" onclick="createEvent()">Crea evento</button></div>
+    </section>
+  </main>
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</body></html>

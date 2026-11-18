@@ -26,3 +26,4 @@ class Config:
     LEGACY_CHECKINS_JSON = BASE_DIR / "data" / "checkins.json"
     STATIONS = ["Postazione 1", "Postazione 2", "Postazione 3", "Postazione 4"]
     STATION_LOCK_SECONDS = 90
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # limite upload Excel: 10 MB
