@@ -12,12 +12,22 @@ def _same_password(supplied, expected):
 @bp.get("/session")
 def current_session():
     station = None
+    event = None
     if session.get("session_id"):
+        now = int(__import__("time").time())
         with cursor() as cur:
-            cur.execute("SELECT station FROM station_locks WHERE session_id = %s AND expires_at > %s", (session["session_id"], int(__import__("time").time())))
+            if session.get("event_id"):
+                cur.execute("SELECT station FROM event_station_locks WHERE event_id=%s AND session_id=%s AND expires_at>%s", (session["event_id"], session["session_id"], now))
+            else:
+                cur.execute("SELECT station FROM station_locks WHERE session_id = %s AND expires_at > %s", (session["session_id"], now))
             row = cur.fetchone()
+            if session.get("event_id"):
+                cur.execute("SELECT id, name, event_date, status FROM events WHERE id=%s", (session["event_id"],))
+                event_row = cur.fetchone()
+                if event_row:
+                    event = {"id": event_row["id"], "name": event_row["name"], "event_date": event_row["event_date"].isoformat(), "status": event_row["status"]}
         station = row["station"] if row else None
-    response = jsonify({"authenticated": bool(session.get("role")), "role": session.get("role"), "station": station})
+    response = jsonify({"authenticated": bool(session.get("role")), "role": session.get("role"), "station": station, "event": event, "event_id": session.get("event_id")})
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -47,5 +57,6 @@ def logout():
     if sid:
         with cursor(commit=True) as cur:
             cur.execute("DELETE FROM station_locks WHERE session_id = %s", (sid,))
+            cur.execute("DELETE FROM event_station_locks WHERE session_id = %s", (sid,))
     session.clear()
     return jsonify(success=True)

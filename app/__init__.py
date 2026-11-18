@@ -4,6 +4,7 @@ from app.db import init_pool, close_pool
 from app.services.initialization import initialize_database
 from app.routes.auth import bp as auth_bp
 from app.routes.api import bp as api_bp
+from app.routes.events import bp as events_bp
 
 def create_app(test_config=None):
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
@@ -20,6 +21,7 @@ def create_app(test_config=None):
     initialize_database(app.config)
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(events_bp)
 
     @app.get("/")
     def index():
